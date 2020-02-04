@@ -1,0 +1,1566 @@
+# Run this in Jupyter, as it doesn't have problems there
+import os
+import sys
+Database = []
+Players_signed_in = [None,None]
+Border = '   -- -- -- '
+First_Row_Half_Top =  'A |  |  |  |'
+First_Row_Bottom = '  |  |  |  |' 
+Second_Row_Top = 'B |  |  |  |'
+Third_Row_Top = 'C |  |  |  |'
+Top_Numbers = '    1  2  3 '
+Board = [list(Top_Numbers), list(Border), list(First_Row_Half_Top), list(First_Row_Bottom), list(Border),\
+         list(Second_Row_Top), list(First_Row_Bottom), list(Border), list(Third_Row_Top), list(First_Row_Bottom),\
+         list(Border)]
+player_1 = None
+
+Array_of_available_spots = [[True, True, True],\
+                            [True, True, True],\
+                            [True, True, True]]
+
+Array_of_player_pieces = [[0,0,0],\
+                          [0,0,0],\
+                          [0,0,0]]
+
+Difficulty = {
+    'Easy':1,
+    'Medium':4,
+    'Hard':7
+}
+Letter_legend = {
+    'A': 1,
+    'B': 2,
+    'C': 3
+}
+
+Number_legend = {
+    0:'A',
+    1:'B',
+    2:'C'
+}
+
+Coordinate_Numbers = {
+    1:3,
+    2:6,
+    3:9
+}
+
+List_of_coordinates = [[['A',3],['A',6],['A',9]],\
+                       [['B',3],['B',6],['B',9]],\
+                       [['C',3],['C',6],['C',9]]]
+
+Combinations = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1','C2','C3']
+Difficulties = ['easy','medium','hard']
+Player_Options = ['s','m']
+
+Duplicate_Combos = []
+for c in Combinations:
+    Duplicate_Combos.append(list(c))
+    
+# prints out the board the way it is now
+def print_board():
+    print_string = ''
+    for board_row in Board:
+        for i in range(len(board_row)):
+            print_string += board_row[i]
+        print(print_string)
+        print_string = ''
+
+#print_board(Board) # ran a test here to make sure that this function works
+
+# Checks to make sure that our coordinates we typed in are in the array of combinations
+def in_combinations(x):
+    for i in range(len(Combinations)):
+        if (x.casefold() == Combinations[i].casefold()):
+            return True
+    return False
+
+# we enter a set of coordinates and make sure that it's in our set of coordinates
+# and if not we repeat the process until it's in our set, then we return it
+def Enter_Coordinates(turn):
+    if turn:
+        coordinates = input('Player 1, enter a set of coordinates.\nEnter the row first, then the column: ')
+        while (not(in_combinations(coordinates))):
+            coordinates = input('This coordinate does not exist. Enter another set of coordinates: ')
+    else:
+        coordinates = input('Player 2, enter a set of coordinates.\nEnter the row first, then the column: ')
+        while (not(in_combinations(coordinates))):
+            coordinates = input('This coordinate does not exist. Enter another set of coordinates: ')
+    return coordinates
+
+# we take the coordinates from Enter_Coordinates and make sure it's not taken. We run a loop
+# if there's something there till we run it and nothing's there. Then we return those coordinates if
+# nothing's there
+def Nothing_There(whos_turn):
+    coordinates = list(Enter_Coordinates(whos_turn))
+    First_Index = Letter_legend[coordinates[0].upper()]
+    Not_There = Array_of_available_spots[First_Index - 1][(int(coordinates[1])) - 1]
+    while(not Not_There):
+        print('Sorry, that spot\'s taken. Choose another one.')
+        coordinates = list(Enter_Coordinates(whos_turn))
+        First_Index = Letter_legend[coordinates[0].upper()]
+        Not_There = Array_of_available_spots[First_Index - 1][(int(coordinates[1])) - 1]
+    #print('All good. Nothing\'s there.')
+    coordinates[0] = coordinates[0].upper()
+    return coordinates
+
+# our function to determine who starts, player 1 or 2. It returns true if 1, false if 2
+def Who_starts():
+    Local_array = ['1', '2']
+    Player_1_or_2 = input('Enter who starts first.\n1 for player 1(X), 2 for player 2(O): ')
+    while (not(Player_1_or_2 in Local_array)):
+        Player_1_or_2 = input('Invalid input. Enter a 1 or a 2: ')        
+    if (Player_1_or_2 == Local_array[0]):
+        return True    
+    return False
+
+#Who_starts()
+#Nothing_There()
+
+# we parse through the board array till we find the list that starts with the first letter used
+# in our coordinates. We take in the letter coordinate of the coordinates needed to mutate the board
+def find_Y(Y_coordinate):
+    for i in (range(len(Board))):
+        if ((Y_coordinate.casefold()) == (Board[i][0].casefold())):
+            return i
+    return 0
+
+def Add_X(coordinates):
+    X_val = Coordinate_Numbers[int(coordinates[1])]
+    Y_val = find_Y(coordinates[0])
+    Board[Y_val][X_val] = '\\'
+    Board[Y_val][X_val + 1] = '/'
+    Board[Y_val + 1][X_val] = '/'
+    Board[Y_val + 1][X_val + 1] = '\\'
+    
+def Add_O(coordinates):
+    X_val = Coordinate_Numbers[int(coordinates[1])]
+    Y_val = find_Y(coordinates[0])
+    Board[Y_val][X_val] = '/'
+    Board[Y_val][X_val + 1] = '\\'
+    Board[Y_val + 1][X_val] = '\\'
+    Board[Y_val + 1][X_val + 1] = '/'
+    
+def Mutate_Board(coordinates, player_1):
+    Array_of_available_spots[Letter_legend[coordinates[0].upper()] - 1][(int(coordinates[1])) - 1] = False
+    #print(Array_of_available_spots[Letter_legend[coordinates[0].upper()] - 1][(int(coordinates[1])) - 1])
+    if player_1:
+        Array_of_player_pieces[Letter_legend[coordinates[0].upper()] - 1][(int(coordinates[1])) - 1] = 1
+        Add_X(coordinates)
+        #print_board()
+    else:
+        Array_of_player_pieces[Letter_legend[coordinates[0].upper()] - 1][(int(coordinates[1])) - 1] = 2 
+        Add_O(coordinates)
+        #print_board()
+
+#Continue = True
+#while (Continue):
+#    for i in (range(len(Array_of_available_spots))): # Code we ran for testing
+#        print(Array_of_available_spots[i])    
+#    for i in (range(len(Array_of_available_spots))):
+#        print(Array_of_player_pieces[i])
+#
+#    print_board() # Test Code
+#    Mutate_Board(Nothing_There(),True) # Test Code, nothing to see here really
+#    print_board()
+#
+#    for i in (range(len(Array_of_available_spots))): # Test code
+#        print(Array_of_available_spots[i])    
+#    for i in (range(len(Array_of_available_spots))):
+#        print(Array_of_player_pieces[i])
+#        
+#    Entry = input('Continue? (Y/N) ')
+#    if ((Entry.casefold()) == 'y'.casefold()):
+#        Continue = True
+#    else:
+#        Continue = False
+        
+
+# For our array of available spots are the three spot numbers equal in a given horizontal row?
+# That's what this does
+def True_across(row):
+    return ((row[0] == row[1]) and (row[1] == row[2]))
+
+# Checks all of the three rows to see if we have three in a row
+def Three_in_a_row(array):
+    for i in (range(len(array))):
+        if (True_across(array[i])):
+            if (not (array[i][0] == 0)):
+                return array[i][0]
+    return None
+
+# Checks all of the three columns to see if we have three in a column
+def Three_in_a_column(column):
+    for i in (range(len(column[0]))):
+        if ((column[0][i] == column[1][i]) and (column[1][i] == column[2][i])):
+            if (not (column[0][i] == 0)):
+                return column[0][i]
+    return None
+
+# Checks the diagonals to see if something is there
+def Diagonals(Chart):
+    if ((Chart[0][0] == Chart[1][1]) and (Chart[1][1] == Chart[2][2])):
+        if (not (Chart[0][0] == 0)):
+            return Chart[0][0]
+    elif ((Chart[0][2] == Chart[1][1]) and (Chart[1][1] == Chart[2][0])):
+        if (not (Chart[1][1] == 0)):    
+            return Chart[1][1]
+    else:
+        return None
+
+# Checks if we have a winner
+def No_one_wins(Game_board):
+    Horizontal = Three_in_a_row(Game_board)
+    Vertical = Three_in_a_column(Game_board)
+    Diagonal = Diagonals(Game_board)
+    
+    if ((not (Horizontal is None)) and (not(Horizontal == 0))):
+        print_board()
+        print('Player', Horizontal, 'wins!')
+        return False
+    elif ((not (Vertical is None)) and (not(Horizontal == 0))):
+        print_board()
+        print('Player', Vertical, 'wins!')
+        return False
+    elif ((not (Diagonal is None)) and (not (Diagonal == 0))):
+        print_board()
+        print('Player', Diagonal, 'wins!')
+        return False
+    else:
+        #print('Nothing in a row. Noone wins yet.')
+        return True
+    
+def All_Filled_Up(array):
+    Row_1 = ((not array[0][0]) and (not array[0][1]) and (not array[0][2]))
+    Row_2 = ((not array[1][0]) and (not array[1][1]) and (not array[1][2]))
+    Row_3 = ((not array[2][0]) and (not array[2][1]) and (not array[2][2]))
+    
+    return (Row_1 and Row_2 and Row_3)
+
+def Run_Game(Name,Second_Name):
+    global Border, First_Row_Half_Top, First_Row_Bottom, Second_Row_Top, Third_Row_Top, Top_Numbers, Board,\
+           Array_of_available_spots, Array_of_player_pieces, Letter_legend, Coordinate_Numbers, Combinations, \
+           player_1
+    player_1 = Who_starts()
+    Nobody_has_won = True
+    Nobody_Wins = None
+    Coordinates = None
+    All_filled = False
+    while (Nobody_has_won):
+        print_board()
+        Coordinates = Nothing_There(player_1)
+        #for i in (range(len(Array_of_available_spots))):
+        #    print(Array_of_player_pieces[i])
+        Mutate_Board(Coordinates, player_1)
+        #for i in (range(len(Array_of_available_spots))):
+        #    print(Array_of_player_pieces[i])
+        Nobody_has_won = No_one_wins(Array_of_player_pieces)
+        if (not(Nobody_has_won)):
+            if player_1:
+                return [Name,Second_Name,True,False,False]
+            else:
+                return [Name,Second_Name,False,True,False]
+        All_filled = All_Filled_Up(Array_of_available_spots)
+        Nobody_Wins = (Nobody_has_won and All_filled)
+        if (Nobody_Wins):
+            print_board()
+            print('Nobody wins.')
+            return [Name,Second_Name,False,False,True]
+            break
+        player_1 = not(player_1)
+    #print('Done!')
+        
+def Reset_the_board():
+    global Array_of_available_spots, Array_of_player_pieces
+    
+    for i in (range(len(Array_of_available_spots))):
+        for j in (range(len(Array_of_available_spots[i]))):
+            Array_of_available_spots[i][j] = True
+            Array_of_player_pieces[i][j] = 0
+    
+    #for i in (range(len(Array_of_available_spots))): # Code we ran for testing
+    #    print(Array_of_available_spots[i])    
+    #for i in (range(len(Array_of_available_spots))):
+    #    print(Array_of_player_pieces[i])
+            
+#Reset_the_board()
+def keep_playing():
+    Inputs = ['y', 'n']
+    Keep_playing = input('Keep playing? \'Y\' for yes, \'N\' for No: ')
+    while (not ((Keep_playing.lower()) in Inputs)):
+        Keep_playing = input('Invalid Entry. Enter \'Y\' for yes, \'N\' for No: ')
+    
+    if ((Keep_playing.casefold()) == ('y'.casefold())):
+        return True
+    else:
+        return False
+
+def Clear_the_board(List):
+    for i in (range(len(List))):
+        for j in (range(len(List[i]))):
+            X_val = List[i][j][1]
+            Y_val = find_Y(List[i][j][0])
+            Board[Y_val][X_val] = ' '
+            Board[Y_val][X_val + 1] = ' '
+            Board[Y_val + 1][X_val] = ' '
+            Board[Y_val + 1][X_val + 1] = ' '
+            
+def All_the_same(number,array):
+    all_equal = (number == array[0]) and (True_across(array))
+    return all_equal
+
+def Three_row(number,array,coordinate):
+    if coordinate in [[0,0],[2,2]]:
+        return ((All_the_same(number,array[coordinate[0]])) or\
+               (All_the_same(number,[array[0][coordinate[1]],array[1][coordinate[1]],array[2][coordinate[1]]])) or\
+               (All_the_same(number,[array[0][0],array[1][1],array[2][2]])))
+    elif coordinate in [[0,2],[2,0]]:
+        return ((All_the_same(number,array[coordinate[0]])) or\
+               (All_the_same(number,[array[0][coordinate[1]],array[1][coordinate[1]],array[2][coordinate[1]]])) or\
+               (All_the_same(number,[array[0][2],array[1][1],array[2][0]])))
+    elif coordinate in [[0,1],[1,0],[1,2],[2,1]]:
+        return ((All_the_same(number,array[coordinate[0]])) or\
+               (All_the_same(number,[array[0][coordinate[1]],array[1][coordinate[1]],array[2][coordinate[1]]])))
+    else:
+        return ((All_the_same(number,array[coordinate[0]])) or\
+               (All_the_same(number,[array[0][coordinate[1]],array[1][coordinate[1]],array[2][coordinate[1]]])) or\
+               (All_the_same(number,[array[0][2],array[1][1],array[2][0]])) or\
+               (All_the_same(number,[array[0][0],array[1][1],array[2][2]])))
+        
+''' Checks to see if we have 2 in a row, used in our fork function
+'''
+def Two_in_a_row(number, array):
+    Times_number = 0
+    Times_0 = 0
+    
+    for i in (range(len(array))):
+        if (array[i] == number):
+            Times_number += 1
+        elif (array[i] == 0):
+            Times_0 += 1
+    
+    if ((Times_number == 2) and (Times_0 == 1)):
+        return True
+    else:
+        return False
+    
+#Two_in_a_row(3,[3,3,0]) # Test code
+
+''' We check take in 2 numbers to look for, the number, the other number, and our array of 3, we check if we
+have a combination of 2 and 1 for our preferred number, 'number'.
+So if we wanted to see if we had blocked their 1 pieces, 2 would be number and 1 would be the other number.
+We will use the maximizing player boolean to switch the order we enter 1, 2 in the function (because if 
+we are switching turns like in algorithm, then we switch spots here)
+'''
+def Blocked_row_of_2(number,other_number,array):
+    Times_number = 0
+    Times_opposite = 0
+    
+    for i in (range(len(array))):
+        if (array[i] == number):
+            Times_number += 1
+        elif (array[i] == other_number):
+            Times_opposite += 1
+    
+    if ((Times_number == 1) and (Times_opposite == 2)):
+        return True
+    else:
+        return False
+    
+''' Our function takes in coordinate, array, 3 boolean values for the vertical, horizontal, and diagonal directions
+ and checks from where the coordinate is for rows of 2. We accordingly give back a list depending on if the list is vertical, 
+ horizontal, and diagonal and our corresponding boolean value is true. We then give back a list of indices for wherever
+ we found the set of 2
+'''
+def Our_function(number,coordinate,array,horizontal,vertical,diagonal):
+    if coordinate in [[0,0],[2,2]]:
+        if ((Two_in_a_row(number,array[coordinate[0]])) and horizontal):
+            return [[coordinate[0],0],[coordinate[0],1],[coordinate[0],2]]
+        elif ((Two_in_a_row(number,[array[0][coordinate[1]],array[1][coordinate[1]],array[2][coordinate[1]]])) and\
+              vertical):
+            return [[0,coordinate[1]],[1,coordinate[1]],[2,coordinate[1]]]
+        elif ((Two_in_a_row(number,[array[0][0],array[1][1],array[2][2]])) and diagonal):
+            return [[0,0],[1,1],[2,2]]
+        else:
+            return []
+    elif coordinate in [[0,2],[2,0]]:
+        if ((Two_in_a_row(number,array[coordinate[0]])) and horizontal):
+            return [[coordinate[0],0],[coordinate[0],1],[coordinate[0],2]]
+        elif ((Two_in_a_row(number,[array[0][coordinate[1]],array[1][coordinate[1]],array[2][coordinate[1]]])) and\
+              vertical):
+            return [[0,coordinate[1]],[1,coordinate[1]],[2,coordinate[1]]]
+        elif ((Two_in_a_row(number,[array[0][2],array[1][1],array[2][0]])) and diagonal):
+            return [[0,2],[1,1],[2,0]]
+        else:
+            return []
+    elif (coordinate == [1,1]):
+        if ((Two_in_a_row(number,array[coordinate[0]])) and horizontal):
+            return [[coordinate[0],0],[coordinate[0],1],[coordinate[0],2]]
+        elif ((Two_in_a_row(number,[array[0][coordinate[1]],array[1][coordinate[1]],array[2][coordinate[1]]])) and\
+              vertical):
+            return [[0,coordinate[1]],[1,coordinate[1]],[2,coordinate[1]]]
+        elif ((Two_in_a_row(number,[array[0][0],array[1][1],array[2][2]])) and diagonal):
+            return [[0,0],[1,1],[2,2]]
+        elif ((Two_in_a_row(number,[array[0][2],array[1][1],array[2][0]])) and diagonal):
+            return [[0,2],[1,1],[2,0]]
+        else:
+            return []
+    else:
+        if ((Two_in_a_row(number,array[coordinate[0]])) and horizontal):
+            return [[coordinate[0],0],[coordinate[0],1],[coordinate[0],2]]
+        elif ((Two_in_a_row(number,[array[0][coordinate[1]],array[1][coordinate[1]],array[2][coordinate[1]]])) and\
+              vertical):
+            return [[0,coordinate[1]],[1,coordinate[1]],[2,coordinate[1]]]
+        else:
+            return []
+''' Block takes in a number, the other number (what to use for blocked row of 2), a coordinate, and the
+array of numbers to use. from our coordinate we see if we have blocked any rows of 2, depending on where 
+we are starting from
+'''
+def Block(coordinate, array, number, other_number):
+    Its_a_block = False
+    if coordinate in [[0,0], [2,2]]:
+        Its_a_block = Blocked_row_of_2(number,other_number,array[coordinate[0]]) or\
+                      Blocked_row_of_2(number,other_number,[array[0][coordinate[1]],\
+                                                            array[1][coordinate[1]],\
+                                                            array[2][coordinate[1]]]) or\
+                      Blocked_row_of_2(number,other_number,[array[0][0],array[1][1],array[2][2]])
+        return Its_a_block
+    elif coordinate in [[0,2],[2,0]]:
+        Its_a_block = Blocked_row_of_2(number,other_number,array[coordinate[0]]) or\
+                      Blocked_row_of_2(number,other_number,[array[0][coordinate[1]],\
+                                                            array[1][coordinate[1]],\
+                                                            array[2][coordinate[1]]]) or\
+                      Blocked_row_of_2(number,other_number,[array[2][0],array[1][1],array[0][2]])
+        return Its_a_block
+    elif coordinate is [1,1]:
+        Its_a_block = Blocked_row_of_2(number,other_number,array[coordinate[0]]) or\
+                      Blocked_row_of_2(number,other_number,[array[0][coordinate[1]],\
+                                                            array[1][coordinate[1]],\
+                                                            array[2][coordinate[1]]]) or\
+                      Blocked_row_of_2(number,other_number,[array[0][0],array[1][1],array[2][2]]) or\
+                      Blocked_row_of_2(number,other_number,[array[2][0],array[1][1],array[0][2]])
+        return Its_a_block
+    else:
+        Its_a_block = Blocked_row_of_2(number,other_number,array[coordinate[0]]) or\
+                      Blocked_row_of_2(number,other_number,[array[0][coordinate[1]],\
+                                                            array[1][coordinate[1]],\
+                                                            array[2][coordinate[1]]])
+        return Its_a_block
+
+'''A fork is where we have 2 unblocked rows of 2. By definition we could have 2 separate unblocked rows of 2, though
+this will not happen by the design of our algorithm, as if there would be 4 pieces used when the player could just win on
+ the third turn if it's not blocked (if we have row 1 and 3 are filled with 2 in a row, if for argument's sake they're never
+ blocked, then we could win on the 3rd or 4th turn). For this reason, all our forks will be 2 connected unblocked rows of 2.
+ We have a coordinat and check if we have 2 unblocked rows of 2 from this coordinate
+'''
+def Fork(coordinate,array,number):
+    #print('Before mutation:')
+    #print(coordinate)
+    #print('After mutation')
+    #for i in (range(len(array))):
+    #    print(array[i])
+    #New_coordinate = []
+    List_1 = Our_function(number,coordinate,array,True,True,True)
+    #print('List_1:',List_1)
+    List_2 = []
+    if ((len(List_1)) != 0):
+        if List_1 in [[[0,0],[1,1],[2,2]],[[0,2],[1,1],[2,0]]]:
+            for i in (range(len(List_1))):
+                List_2 = Our_function(number,List_1[i],array,True,True,False)
+                #print('List_2:',List_2)
+                if ((len(List_2)) != 0):
+                    return True
+            return False
+        elif ((List_1[0][0] == List_1[1][0]) and (List_1[1][0] == List_1[2][0])):
+            for i in (range(len(List_1))):
+                List_2 = Our_function(number,List_1[i],array,False,True,True)
+                #print('List_2:',List_2)
+                if ((len(List_2)) != 0):
+                    return True
+            return False
+        else:
+            for i in (range(len(List_1))):
+                List_2 = Our_function(number,List_1[i],array,True,False,True)
+                #print('List_2:',List_2)
+                if ((len(List_2)) != 0):
+                    return True
+            return False
+    else:
+        return False
+    
+#print('Outside the function array:')
+#for i in (range(len(Array_of_player_numbers))):
+#    print(Array_of_player_numbers[i])
+
+#Fork([0,2],Array_of_player_numbers,1)
+ 
+#print('Outside the function array:')
+#for i in (range(len(Array_of_player_numbers))):
+        #print(Array_of_player_numbers[i])
+
+''' This function is what returns whether or not there was an opposite corner
+'''
+def Opposite_corner(coordinate, array, other_number):
+    if ((coordinate == [0,0]) and (array[2][2] == other_number)):
+        return True
+    elif ((coordinate == [2,2]) and (array[0][0] == other_number)):
+        return True
+    elif ((coordinate == [2,0]) and (array[0][2] == other_number)):
+        return True
+    elif ((coordinate == [0,2]) and (array[2][0] == other_number)):
+        return True
+    else:
+        return False
+
+def Fork_for_them(coordinate,array,number,other_number):
+    Fork_Opposite = False
+    if (array[coordinate[0]][coordinate[1]] == other_number):
+        array[coordinate[0]][coordinate[1]] = number
+        Fork_Opposite = Fork(coordinate,array,number)
+        array[coordinate[0]][coordinate[1]] = other_number
+    #for i in (range(len(array))):
+    #        print(array[i])
+    return Fork_Opposite
+
+def Static_Evaluation(coordinate,array,number,other_number):
+    Three = Three_row(number,array,coordinate)
+    #print('Three in a row:',Three, 'for',coordinate)
+    A_Block = Block(coordinate,array,number,other_number)
+    #print('Block:',A_Block,'for',coordinate)
+    Forks = Fork(coordinate,array,number)
+    #print('Fork for us:',Forks,'for',coordinate)
+    Opposite = Fork_for_them(coordinate,array,other_number,number)
+    #print('Fork for them:',Opposite,'for',coordinate)
+    
+    if Three:
+        return [coordinate,8]
+    elif A_Block:
+        return [coordinate,7]
+    elif Forks:
+        return [coordinate,6]
+    elif Opposite:
+        return [coordinate,5]
+    elif coordinate == [1,1]:
+        return [coordinate,4]
+    elif Opposite_corner(coordinate,array,other_number):
+        return [coordinate,3]
+    elif coordinate in [[0,0],[0,2],[2,0],[2,2]]:
+        return [coordinate,2]
+    else:
+        return [coordinate,1]
+    
+def No_wins(Game_board):
+    Horizontal = Three_in_a_row(Game_board)
+    Vertical = Three_in_a_column(Game_board)
+    Diagonal = Diagonals(Game_board)
+    
+    if ((not (Horizontal is None)) and (not(Horizontal == 0))):
+        #print_board()
+        #print('Player', Horizontal, 'wins!')
+        return [False, Horizontal]
+    elif ((not (Vertical is None)) and (not(Horizontal == 0))):
+        #print_board()
+        #print('Player', Vertical, 'wins!')
+        return [False,Vertical]
+    elif ((not (Diagonal is None)) and (not (Diagonal == 0))):
+        #print_board()
+        #print('Player', Diagonal, 'wins!')
+        return [False,Diagonal]
+    else:
+        #print('Nothing in a row. Noone wins yet.')
+        return [True,0]
+    
+def minimax(depth,array,maximizing_player,number,other_number,coordinate,Array):
+    max_eval = - sys.maxsize
+    min_eval = sys.maxsize
+    Max_evaluation = [0,0]
+    Min_Evaluation = [0,0]
+    #Max_coordinate = []
+    #Min_coordinate = []
+    Win = No_wins(array)
+    Filled_up = All_Filled_Up(Array)
+    Evaluation = []
+    if (((depth == 0) or (not Win[0])) or Filled_up):
+        if (not maximizing_player):
+            Evaluation = Static_Evaluation(coordinate,array,number,other_number)
+            return Evaluation
+        else:
+            Evaluation = Static_Evaluation(coordinate,array,other_number,number) 
+            Evaluation[1] *= -1
+            return Evaluation
+    
+    if maximizing_player:
+        for i in (range(len(array))):
+            for j in (range(len(array[i]))):
+                if (array[i][j] == 0):
+                    array[i][j] = number
+                    #for x in (range(len(array))):
+                    #        print(array[x])
+                    #print('\n')
+                    #print('Coordinates max:',[i,j])
+                    Array[i][j] = False
+                    Evaluation = minimax(depth - 1,array,False,number,other_number,[i,j],Array)
+                    #print(Evaluation)
+                    if (Evaluation[1] > max_eval):
+                        Max_evaluation = [Evaluation[0],Evaluation[1]]
+                   #     print('Max Evaluation:',Max_evaluation)
+                    max_eval = max(max_eval,Evaluation[1])
+                    array[i][j] = 0
+                    Array[i][j] = True
+                    #for i in (range(len(array))):
+                    #    print(array[i])
+                        #print('\n')'''
+        return Max_evaluation
+    
+    else:
+        for i in (range(len(array))):
+            for j in (range(len(array[i]))):
+                if (array[i][j] == 0):
+                    array[i][j] = other_number
+                    Array[i][j] = False
+                    #for x in (range(len(array))):
+                    #    print(array[x])
+                    #print('\n')
+                    #print('Coordinates min:',[i,j])
+                    Evaluation = minimax(depth - 1,array,True,number,other_number,[i,j],Array)
+                    #print(Evaluation)
+                    if (Evaluation[1] < min_eval):
+                        Min_evaluation = [Evaluation[0],Evaluation[1]]
+                    #    print('Min Evaluation:', Min_evaluation)
+                    min_eval = min(min_eval,Evaluation[1])
+                    array[i][j] = 0
+                    Array[i][j] = True
+                    #for i in (range(len(array))):
+                    #    print(array[i])
+                    #print('\n')
+        return Min_evaluation
+    
+
+#for i in (range(len(Array_of_player_numbers))):
+#    print(Array_of_player_numbers[i])
+#X = 0
+#Copy = Array_of_player_numbers.copy()
+#for i in (range(len(Array_of_player_numbers))):
+#    for j in (range(len(Array_of_player_numbers[i]))):
+#        if (Copy[i][j] == 0):
+#            Copy[i][j] = 1
+#            X = Static_Evaluation([i,j],Copy,1,2)
+#            #print(X)
+#            Copy[i][j] = 0
+#        else:
+#            X = Static_Evaluation([i,j],Copy,1,2)
+            #print(X)
+def The_AI(array,difficulty,Array):
+    min_eval = -sys.maxsize
+    Coordinates = []
+    Best_coordinates = []
+    for i in (range(len(array))):
+        for j in (range(len(array[i]))):
+            if (array[i][j] == 0):
+        #        print([i,j])
+                Coordinates = minimax(difficulty,array,True,1,2,[i,j],Array)
+        #        print('Outside:',Coordinates)
+                if (Coordinates[1] > min_eval):
+                    Best_coordinates= [Coordinates[0],Coordinates[1]]
+                    min_eval = max(min_eval,Coordinates[1])
+        #            print('Min eval:', min_eval)
+        #for i in (range(len(Array_of_player_numbers))):
+        #    print(Array_of_player_numbers[i])
+        #print('Best Coordinates:',Best_coordinates)
+    return Best_coordinates
+
+def Tic_Tac_Toe_Interactive_Version():
+    global Border, First_Row_Half_Top, First_Row_Bottom, Second_Row_Top, Third_Row_Top, Top_Numbers, Board,\
+           Array_of_available_spots, Array_of_player_pieces, Letter_legend, Coordinate_Numbers, Combinations, \
+           player_1, List_of_coordinates
+    
+    Continue = True
+    while Continue:
+        Run_Game()
+        Continue = keep_playing()
+        if Continue:
+            Reset_the_board()
+            Clear_the_board(List_of_coordinates)
+    print('Done!')
+
+def Run_Single_player(Name,difficulty):
+    global Border, First_Row_Half_Top, First_Row_Bottom, Second_Row_Top, Third_Row_Top, Top_Numbers, Board,\
+           Array_of_available_spots, Array_of_player_pieces, Letter_legend, Coordinate_Numbers, Combinations, \
+           player_1
+    X = None
+    Y = None
+    player_1 = Who_starts()
+    Nobody_has_won = No_wins(Array_of_player_pieces)
+    Nobody_Wins = None
+    Coordinates = None
+    while Nobody_has_won[0]:
+        print_board()
+        Coordinates = Nothing_There(player_1)
+        Mutate_Board(Coordinates,player_1)
+        Nobody_has_won = No_wins(Array_of_player_pieces)
+        All_filled = All_Filled_Up(Array_of_available_spots)
+        Nobody_Wins = ((Nobody_has_won[0]) and All_filled)
+        if (not (Nobody_has_won[0])):
+            print_board()
+            print('Player',Nobody_has_won[1],'wins!')
+            return [Name,difficulty,True,False,False]
+            break
+        if (Nobody_Wins):
+            print_board()
+            print('Nobody wins.')
+            return [Name,difficulty,False,False,True]
+            break
+        #X = input('Do you wish to exit?')
+        #if (X == 'Y'):
+        #    print('Out before the AI')
+        #    break
+        #elif (X == 'N'):
+        #    print('Moving to the AI')
+        #print_board()
+        #for i in (range(len(Array_of_player_pieces))):
+        #    print(Array_of_player_pieces[i])
+        Coordinates = The_AI(Array_of_player_pieces,difficulty,Array_of_available_spots)
+        #print(Coordinates)
+        #print(Coordinates)
+        Mutate_Board([Number_legend.get(int(Coordinates[0][0])),(Coordinates[0][1] + 1)],(not(player_1)))
+        Nobody_has_won = No_wins(Array_of_player_pieces)
+        All_filled = All_Filled_Up(Array_of_available_spots)
+        Nobody_Wins = ((Nobody_has_won[0]) and All_filled)
+        if (not (Nobody_has_won[0])):
+            print_board()
+            print('Player',Nobody_has_won[1],'wins!')
+            return [Name,difficulty,False,True,False]
+            break
+        if (Nobody_Wins):
+            print_board()
+            print('Nobody wins.')
+            return [Name,difficulty,False,False,True]
+            break
+        #Y = input('Do you wish to exit?')
+        #if ( Y== 'Y'):
+        #    print('Out after the AI')
+        #    break
+        #elif (Y == 'N'):
+        #    print('Moving to the next cycle')
+
+#The_AI(Array_of_player_pieces,4)
+#The_AI([[2,0,2],[1,2,0],[1,2,1]],7,[[False,True,False],[False,False,True],[False,False,False]])
+#def Run_the_game
+
+#Function gives us our difficulty that we then select
+def Select_Difficulty():
+    Input = input('Enter a level of difficulty. Enter either \'Easy\', \'Medium\', or \'Hard\':')
+    while (not((Input.casefold()) in Difficulties)):
+        Input = input('Invalid input. Enter either \'Easy\', \'Medium\', or \'Hard\':')
+    if ((Input.casefold()) == Difficulties[0]):
+        return Difficulty['Easy']
+    elif ((Input.casefold()) == Difficulties[1]):
+        return Difficulty['Medium']
+    else:
+        return Difficulty['Hard']
+
+def Select_Player_Option():
+    global Border, First_Row_Half_Top, First_Row_Bottom, Second_Row_Top, Third_Row_Top, Top_Numbers, Board,\
+           Array_of_available_spots, Array_of_player_pieces, Letter_legend, Coordinate_Numbers, Combinations, \
+           player_1, List_of_coordinates,Player_Options,Difficulties,Players_signed_in,Database
+    X = None
+    Nones = Number_of_nones(Players_signed_in)
+    Result = []
+    Input = input('Select \'s\' for single player, \'m\' for multiplayer:')
+    while (not((Input.casefold()) in Player_Options)):
+        Input = input('Invalid input. Enter either \'s\' for single player, or \'m\' for multiplayer:')
+    if ((Input.casefold()) == Player_Options[0]):
+        if (Nones == 0):
+            Input = input('There are 2 people signed in. Select 1 of \'{First_name}\' and\
+ \'{Second_name}\' to play as:'.format(First_name = Players_signed_in[0],Second_name = Players_signed_in[1]))
+            while (not((Input.casefold()) in Players_signed_in)):
+                Input = input('Invalid input. Select 1 of \'{First_name}\' and\
+ \'{Second_name}\' to play as:'.format(First_name = Players_signed_in[0],Second_name = Players_signed_in[1]))
+            X = Select_Difficulty()
+            Result = Run_Single_player(Input,X)
+            Result_Score_Single_Player(Result[0],Result[1],Result[2],Result[3],Result[4])
+            Database = Rank_Database()
+            Write_to_file()
+            Reset_the_board()
+            Clear_the_board(List_of_coordinates)
+        elif (Nones == 1):
+            if (Players_signed_in[0] == None):
+                X = Select_Difficulty()
+                Result = Run_Single_player(Players_signed_in[1],X)
+                Result_Score_Single_Player(Result[0],Result[1],Result[2],Result[3],Result[4])
+                Database = Rank_Database()
+                Write_to_file()
+                Reset_the_board()
+                Clear_the_board(List_of_coordinates)
+            else:
+                X = Select_Difficulty()
+                Result = Run_Single_player(Players_signed_in[0],X)
+                Result_Score_Single_Player(Result[0],Result[1],Result[2],Result[3],Result[4])
+                Database = Rank_Database()
+                Write_to_file()
+                Reset_the_board()
+                Clear_the_board(List_of_coordinates)
+        else:
+            print('You will be signed in as nobody.')
+            X = Select_Difficulty()
+            Result = Run_Single_player(None,X)
+            Result_Score_Single_Player(Result[0],Result[1],Result[2],Result[3],Result[4])
+            Database = Rank_Database()
+            Write_to_file()
+            Reset_the_board()
+            Clear_the_board(List_of_coordinates)
+    else:
+        if (Nones == 1):
+            if (Players_signed_in[0] == None):
+                i = 1
+            else:
+                i = 0
+            Name = input('One person signed in. Sign in another:')
+            Is_there = Name_is_there(Name)
+            while (((len(Is_there)) == 0) or (Name == Players_signed_in[i])):
+                Name = input('The name you registered as is not there or signed in. Enter a different name.\n')
+                Is_there = Name_is_there(Name)
+            print('These are the two names signed in. The second name signed in is the second player.')
+            Result = Run_Game(Players_signed_in[i],Name)
+            Result_Score_Multiplayer(Result[0],Result[1],Result[2],Result[3],Result[4])
+            Database = Rank_Database()
+            Write_to_file()
+            Reset_the_board()
+            Clear_the_board(List_of_coordinates)
+        elif (Nones == 0):
+            print(Players_signed_in)
+            print('The first person signed in above is player 1, and 2 for the second player')
+            Result = Run_Game(Players_signed_in[0],Players_signed_in[1])
+            Result_Score_Multiplayer(Result[0],Result[1],Result[2],Result[3],Result[4])
+            Database = Rank_Database()
+            Write_to_file()
+            Reset_the_board()
+            Clear_the_board(List_of_coordinates)
+        else:
+            print('Nobody is signed in, so the game will continue without anyone signed in.')
+            Result = Run_Game('','')
+            Reset_the_board()
+            Clear_the_board(List_of_coordinates)
+            
+def Tic_Tac_Toe():
+    global Border, First_Row_Half_Top, First_Row_Bottom, Second_Row_Top, Third_Row_Top, Top_Numbers, Board,\
+           Array_of_available_spots, Array_of_player_pieces, Letter_legend, Coordinate_Numbers, Combinations, \
+           player_1, List_of_coordinates,Player_Options,Difficulties
+    Continue = True
+    while Continue:
+        Select_Player_Option()
+        Continue = keep_playing()
+        if Continue:
+            Reset_the_board()
+            Clear_the_board(List_of_coordinates)
+    print('Done!')
+    
+def Result_Score_Multiplayer(Name,Second_Name,Win,Loss,Tie):
+    global Database
+    a = 0
+    j = 0
+    if (Name == ''):
+        return None
+    for i in (range(len(Database))):
+        if ((Name.casefold()) == (Database[i][0].casefold())):
+            a = i
+        elif ((Second_Name.casefold()) == (Database[i][0].casefold())):
+            j = i
+    if Win:
+        Database[a][4] += 2
+        Database[j][4] -= 2
+        Database[a][1] += 1
+        Database[j][2] += 1
+    elif Loss:
+        Database[a][4] -= 2
+        Database[j][4] += 2
+        Database[a][2] += 1
+        Database[j][1] += 1
+    else:
+        Database[a][4] += 1
+        Database[j][4] += 1
+        Database[a][3] += 1
+        Database[j][3] += 1
+    
+def Number_of_nones(List):
+    i = 0
+    for item in List:
+        if (item == None):
+            i += 1
+    return i
+
+def median(list_of_numbers):
+    ordered_list = []
+    list_min = 0
+    
+    while ((len(list_of_numbers)) > 0):
+        list_min = list_of_numbers.pop(list_of_numbers.index(min(list_of_numbers)))
+        print('New list is', list_of_numbers)
+        ordered_list.append(list_min)
+        print('New ordered list:', ordered_list)
+        
+    if ((len(ordered_list)) % 2) == 0:
+        return (ordered_list[(len(ordered_list)) // 2] + ordered_list[((len(ordered_list)) // 2) - 1]) / 2
+    else:
+        return ordered_list[(len(ordered_list)) // 2]
+    
+#median([2,3,4,3.5,4,5,7])
+
+def New_Rank(List):
+    a = 0
+    Place_holder = []
+    List_of_scores = []
+    New_List = []
+    Max = None
+    for j in (range(len(List))):
+        List_of_scores.append(List[j][4])
+    List_of_scores_copy = List_of_scores.copy()
+    while ((len(List_of_scores_copy)) > 0):
+        Max = max(List_of_scores_copy)
+        #print('Iteration:', (a+1), 'Max:',Max)
+        #print('List of scores copy before remove:', List_of_scores_copy)
+        New_List.append(List[List_of_scores_copy.index(Max)])
+        List.pop(List_of_scores_copy.index(Max))
+        #print('List:',List)
+        #print('New List:', New_List)
+        List_of_scores_copy.remove(Max)
+        #print('List of scores copy:', List_of_scores_copy)
+        a += 1
+    for i in (range(len(New_List) - 1)):
+        if (New_List[i][4] == New_List[i + 1][4]):
+            #print('Index:',i)
+            #print(('New_List[%d][0]:' % i), New_List[i][0])
+            #print(('New_List[%d][0]:' % (i + 1)), New_List[i + 1][0])
+            if ((New_List[i][0].casefold()) > (New_List[i + 1][0].casefold())):
+                Place_holder = New_List[i + 1]
+                #print('New List[i + 1]',Place_holder)
+                #print('New List[i]',New_List[i])
+                #print('Placeholder:',Place_holder)
+                New_List[i + 1] = New_List[i]
+                New_List[i] = Place_holder
+                #print(('New_List[%d][0]:' % i), New_List[i][0])
+                #print(('New_List[%d][0]:' % (i + 1)), New_List[i + 1][0])
+    #print(New_List)
+    return New_List
+
+def Remove_all_zeros():
+    global Database
+    i = 0
+    All_zeros = None
+    List_of_zeros = []
+    Element = None
+    length = len(Database)
+    while (i < length):
+        All_zeros = ((0 == Database[i][1]) and (Database[i][1] == Database[i][2]) and (Database[i][3] == Database[i][2]) and\
+                      (Database[i][3] == Database[i][4]))
+        if All_zeros:
+            Element = Database[i]
+            Database.pop(i)
+            List_of_zeros.append(Element)
+        else:
+            i += 1
+        length = len(Database)
+    
+    return List_of_zeros
+
+def Rank_Database():
+    global Database
+    Players_not_played_yet = Remove_all_zeros()
+    #print('Player not played yet:',Players_not_played_yet)
+    #print('Database inside Rank Database:',Database)
+    Database = New_Rank(Database)
+    #print('Database past new rank:',Database)
+    Players_not_played_yet = New_Rank(Players_not_played_yet)
+    #print('Database past players not played yet:',Database)
+    for i in (range(len(Players_not_played_yet))):
+        #print(('Iteration %d:' % (i+1)),Players_not_played_yet[i])
+        Database.append(Players_not_played_yet[i])
+    return Database
+        
+def Result_Score_Single_Player(Name,difficulty,win,loss,tie):
+    global Database
+    a = 0
+    if (Name == None):
+        return None
+    for i in (range(len(Database))):
+        if ((Database[i][0].casefold()) == Name.casefold()):
+            a = i
+            break
+    if win:
+        Database[a][1] += 1
+        if (difficulty == Difficulty['Hard']):
+            Database[a][4] += 6
+        elif (difficulty == Difficulty['Medium']):
+            Database[a][4] += 5
+        else:
+            Database[a][4] += 4
+    elif loss:
+        Database[a][2] += 1
+        if (difficulty == Difficulty['Hard']):
+            Database[a][4] += -4
+        elif (difficulty == Difficulty['Medium']):
+            Database[a][4] += -5
+        else:
+            Database[a][4] += -6
+    else:
+        Database[a][3] += 1
+        if (difficulty == Difficulty['Hard']):
+            Database[a][4] += 3
+        elif (difficulty == Difficulty['Medium']):
+            Database[a][4] += 2
+        else:
+            Database[a][4] += 1
+
+def Leaderboards_check():
+    #print('before')
+    if (not os.path.exists('Leaderboards.txt')):
+        #print('file does not exist. Creating file.')
+        Leaderboards = open('Leaderboards.txt','w')
+        #x = Leaderboards.mode
+        Leaderboards.write('                             Leaderboards                             \n')
+        Leaderboards.write('Username             Wins          Losses          Ties          Score\n')
+        Leaderboards.write('----------------------------------------------------------------------\n')
+        Leaderboards.close()
+        #Leaderboards = open('Leaderboards.txt','r')
+        #Contents = Leaderboards.read()
+        #print(Contents)
+        #Contents = Leaderboards.readline()
+        #print(Contents)
+        #Leaderboards.close()
+    #print('after')
+
+    
+#Leaderboards_check()
+def Add_spaces(x):
+    if x <= 0:
+        x = 1
+    empty = ''
+    for i in range(x):
+        empty += ' '
+    #empty += 'a'
+    #print(empty)
+    return empty
+
+#Check makes sure that we have no invalid characters in our string
+def Check(string):
+    Input_string = string.casefold()
+    List_of_chars = list(Input_string)
+    
+    if (Input_string == ('username'.casefold())):
+        return False
+    
+    if (((len(List_of_chars)) > 15) and ((len(List_of_chars)) == 0)):
+        return False
+    
+    for i in (range((len(List_of_chars)) - 1)):
+        if (List_of_chars[i] == ' '):
+            if (List_of_chars[i + 1] == ' '):
+                return False
+    
+    for i in (range(len(List_of_chars))):
+        if (not ('a' <= List_of_chars[i] <= 'z')):
+            if (not ('0' <= List_of_chars[i] <= '9')):
+                if (not (List_of_chars[i] == '_')):
+                    if (not (List_of_chars[i] == '-')):
+                        if (not (List_of_chars[i] == ' ')):
+                            return False
+    del List_of_chars
+    del Input_string
+    return True
+    
+def New_username():
+    Username = input('Enter a username with the following conditions:\n1) It must have alphabets.\n2) It may have\
+ numbers.\n3) It may have underscores or dashes.\n4) It must be between 1 and 15 characters long.\n5) It may use one\
+ space at a time before a new word/letter.\n6) It can\'t be username.\n')
+    Fits_requirements = Check(Username)
+    
+    while (not (Fits_requirements)):
+        Username = input('Invalid Input. Remember the following conditions:\n1) It must have alphabets.\n2) It may have\
+ numbers.\n3) It may have underscores or dashes.\n4) It must be up to 15 characters max.\n5) It may use one space at a time\
+ before a new word/letter.\n6)It can\'t be username.\n')
+        Fits_requirements = Check(Username)
+    
+    return Username
+
+def Print_Leaderboards():
+    with open('Leaderboards.txt') as Leaderboards:
+        for line in Leaderboards:
+            print(line,end='')
+
+def Create_string(Name,Wins,Losses,Ties,Score):
+    New_Line = Name
+    New_Line += ((Add_spaces(21 - (len(list(New_Line))))) + (str(Wins)))
+    New_Line += ((Add_spaces(35 - (len(list(New_Line))))) + (str(Losses)))
+    New_Line += ((Add_spaces(51 - (len(list(New_Line))))) + (str(Ties)))
+    New_Line += ((Add_spaces(65 - (len(list(New_Line))))) + (str(Score)) + '\n')   
+    return New_Line
+# 
+def Add_a_username():
+    global Database
+    Username = New_username()
+    #Spaces = Add_spaces(spaces)
+    Leaderboards_check()
+    #print('Leaderboards before:')
+    #Print_Leaderboards()
+    print('Leaderboards before username added:')
+    Print_Leaderboards()
+    New_Line = Create_string(Username,0,0,0,0)
+    #print(Database)
+    Database.append([Username,0,0,0,0])
+    #print(Database)
+    #print(New_Line)
+    with open('Leaderboards.txt','a') as Leaderboards:
+        Leaderboards.write(New_Line)
+    print('Leaderboards after username added:')
+    #with open('Leaderboards.txt','r') as Leaderboards:
+    #    print(Leaderboards.readlines())
+    Print_Leaderboards() 
+
+def get_name(Line):
+    Name = ''
+    
+    for i in (range(len(Line))):
+        if (Line[i] == ' '):
+            if (Line[i+1] == ' '):
+                del Line
+                return Name
+        Name += Line[i]
+
+# Get Wins, Get Losses, Get Ties, and Get scores are helpers for our get profile function, as well as get name
+def get_wins(Line):
+    Wins = ''
+    for i in (range(21,(len(Line)))):
+        if ('0' <= Line[i] <= '9'):
+            Wins += Line[i]
+        else:
+            del Line
+            return (int(Wins))
+
+def get_losses(Line):
+    Losses = ''
+    for i in (range(35,(len(Line)))):
+        if ('0' <= Line[i] <= '9'):
+            Losses += Line[i]
+        else:
+            del Line
+            return (int(Losses))
+        
+def get_ties(Line):
+    Ties = ''
+    for i in (range(51,(len(Line)))):
+        if ('0' <= Line[i] <= '9'):
+            Ties += Line[i]
+        else:
+            del Line
+            return (int(Ties))
+
+def get_scores(Line):
+    Scores = ''
+    for i in (range(65,(len(Line)))):
+        if ('0' <= Line[i] <= '9'):
+            Scores += Line[i]
+        else:
+            del Line
+            return (int(Scores))
+
+def get_profile(Line):
+    Name = get_name(Line)
+    Wins = get_wins(Line)
+    Losses = get_losses(Line)
+    Ties = get_ties(Line)
+    Score = get_scores(Line)
+    Profile = [Name,Wins,Losses,Ties,Score]
+    return Profile
+
+'''
+'''
+def adjust_entry(Username,Result,Win,Loss,Tie):
+    global Database
+    for i in (range(len(Database))):
+        if ((Database[i][0].casefold()) == (Username.casefold())):
+            if Win:
+                Database[i][1] += 1
+                Database[i][4] += Result
+            elif Loss:
+                Database[i][2] += 1
+                Database[i][4] += Result
+            else:
+                Database[i][3] += 1
+                Database[i][4] += Result
+
+#print('Database before new rank:',Database)
+#Database = Rank_Database()
+#print('Database after new rank:',Database)
+#Add_a_username()
+#print('Database after username:',Database)
+#Database = Rank_Database()
+
+'''We have our database entries which we write to our leaderboards to now print. We have ranked the database
+from earlier, so this is used in such a way that the Leaderboards will be printed exactly in the order they 
+should. Seeking a character does not seem to work with the write method as much as the read method though.
+'''
+def Write_to_file():
+    global Database
+    #l = 215
+    with open('Leaderboards.txt','w') as Leaderboards:
+        Leaderboards.write('                             Leaderboards                             \n')
+        Leaderboards.write('Username             Wins          Losses          Ties          Score\n')
+        Leaderboards.write('----------------------------------------------------------------------\n')
+        #print('Wrote 1st 3 lines')
+        for Entry in Database:
+            Leaderboards.write(Create_string(Entry[0],Entry[1],Entry[2],Entry[3],Entry[4]))
+            #print('Wrote:',Entry)
+
+#Write_to_file()
+#Print_Leaderboards()
+#get_profile((Create_string('Sailesh',0,0,0,0)))
+''' So we have our text file with strings. We must add get these profiles for our sign in process, and 
+basically everything else we do with the Leaderboards. We seek the end of the third line which is where
+we start reading in strings to create the profiles from, which we add to our database for later uses. 
+More efficient algorithms for larger sets of data are under construction for now. Stay tuned.
+'''
+def Get_Profiles():
+    global Database
+    Leaderboards_check()
+    l = 216
+    Line = None
+    with open('Leaderboards.txt','r') as Leaderboards:
+        Leaderboards.seek(l)
+        Line = Leaderboards.readline()
+        #print(Line)
+        while ((len(Line)) > 0):
+            Database.append(get_profile(Line))
+            l += (len(Line))
+            Line = Leaderboards.readline()
+    #print('In get profiles:',Database)
+    
+#Get_Profiles()
+#print(Database)
+#with open('Leaderboards.txt','w') as Leaderboards:
+#    Leaderboards.seek(216)
+#    Leaderboards.write(Create_string('Zed123',0,0,0,0))
+
+#print('New:')
+#Print_Leaderboards()
+#Get_Profiles()
+
+def Name_is_there(Name):
+    global Database
+    for Entry in Database:
+        if ((Name.casefold()) == (Entry[0].casefold())):
+            return Name
+    return ''
+
+
+def Enter_new_name():
+    global Database
+    Database= Rank_Database()
+    Leaderboards_check()
+    Write_to_file()
+    #Print_Leaderboards()
+    New_Name = New_username()
+    Name_in_database = Name_is_there(New_Name)
+    while ((len(Name_in_database)) != 0):
+        print('Sorry, that name\'s taken, or you entered nothing.',end='')
+        New_Name = New_username()
+        Name_in_database = Name_is_there(New_Name)
+    Database.append([New_Name,0,0,0,0])
+    Database = Rank_Database()
+    Write_to_file()
+    #Print_Leaderboards()
+
+#Enter_new_name()
+
+def Sign_in():
+    global Database, Players_signed_in
+    i = 0
+    Player_to_sign_in = ''
+    Input = input('Press \'s\' to sign in, press \'n\' to enter a new name.\n')
+    while (not((Input.casefold()) in ['s','n'])):
+        Input = input('Invalid input. Press \'s\' to sign in, press \'n\' to enter a new name.\n')
+    if ((Input.casefold()) == 's'):
+            Mode = input('Press \'s\' for single player \'m\' for multiplayer (which mode you plan to play as).\n')
+            while (not((Mode.casefold()) in ['s','m'])):
+                Mode = input('Invalid input. Press \'s\' for single player \'m\' for multiplayer (which mode you plan to play as).\n')
+            if ((Mode.casefold()) == 's'): 
+                if ((len(Database)) == 0):
+                    print('No entry in the leaderboard.',end='')
+                    Enter_new_name()
+                    print('This is the name you will be signed in as.')
+                    return[Database[0][0].casefold(),None]
+                else:
+                    Nones = Number_of_nones(Players_signed_in)
+                    if (Nones == 0):
+                        Player_to_sign_in = input('There are 2 people signed in. Select 1 of \'{First_name}\' and\
+ \'{Second_name}\' to remove:'.format(First_name = Players_signed_in[0],Second_name = Players_signed_in[1]))
+                        while (not (Player_to_sign_in.casefold() in Players_signed_in)):
+                            Player_to_sign_in = input('Invalid input. Select 1 of \'{First_name}\' and\
+ \'{Second_name}\' to remove:'.format(First_name = Players_signed_in[0],Second_name = Players_signed_in[1]))
+                        Players_signed_in[Players_signed_in.index(Player_to_sign_in.casefold())] = None
+                        if (Players_signed_in[0] == None):
+                            Players_signed_in[0] = Players_signed_in[1].casefold()
+                            Players_signed_in[1] = None
+                        return Players_signed_in
+                    elif (Nones == 1):
+                        #print('Placceholder statement')
+                        if (Players_signed_in[0] == None):
+                            i = 1
+                        else:
+                            i = 0
+                        Player_to_sign_in = input('There is only \'{First_name}\' signed in. Continue(Y/N)?'.format\
+                                                 (First_name = Players_signed_in[i]))
+                        while (not((Player_to_sign_in.casefold()) in  ['y','n'])):
+                            Player_to_sign_in = input('Invalid input. Press \'y\' to stay signed in as \'{First_name}\'\
+ or press \'n\' otherwise.'.format(First_name = Players_signed_in[i]))
+                        if ((Player_to_sign_in.casefold()) == 'y'):
+                            return Players_signed_in
+                        else:
+                            if ((len(Database)) == 1):
+                                print('Only one person in the database. You can only be signed in as what you are now.')
+                                return Players_signed_in
+                            Name = input('Enter a username.\n')
+                            Is_there = Name_is_there(Name)
+                            while (((len(Is_there)) == 0) or (Players_signed_in[i] == Name)):
+                                Name = input('The name you registered as is not there or\
+ has already been signed in. Enter a different name.\n')
+                                Is_there = Name_is_there(Name)
+                            return [Name.casefold(),None]
+                    else:
+                        Name = input('Enter a username.\n')
+                        Is_there = Name_is_there(Name)
+                        while ((len(Is_there)) == 0):
+                            Name = input('The name you registered as is not there. Enter a different name.\n')
+                            Is_there = Name_is_there(Name)
+                        return [Name.casefold(),None]
+            else:
+                if ((len(Database)) == 0):
+                    print('The leaderboards are empty. You will have to enter 2 names.')
+                    Enter_new_name()
+                    Enter_new_name()
+                    print('These 2 names will be signed in when playing.')
+                    return [Database[0][0].casefold(),Database[1][0].casefold()]
+                elif ((len(Database)) == 1):         
+                    print('Not enough names in the leaderboard. You must enter another.')
+                    Enter_new_name()
+                    print('These 2 names will be signed in when playing.')
+                    return [Database[0][0].casefold(),Database[1][0].casefold()]
+                else:
+                    Nones = Number_of_nones(Players_signed_in)
+                    if (Nones == 0):
+                        print('Two people are signed in already.')
+                        return Players_signed_in
+                    elif (Nones == 1):
+                        if (Players_signed_in[0] == None):
+                            i = 1
+                        else:
+                            i = 0
+                        Name = input('One person signed in. Sign in another:')
+                        Is_there = Name_is_there(Name)
+                        while (((len(Is_there)) == 0) or (Name == Players_signed_in[i])):
+                            Name = input('The name you registered as is not there or signed in. Enter a different name.\n')
+                            Is_there = Name_is_there(Name)
+                        Players_signed_in = [Players_signed_in[i].casefold(),Name.casefold()]
+                        return Players_signed_in
+                    else:
+                        Name = input('Enter the first username.\n')
+                        Is_there = Name_is_there(Name)
+                        while ((len(Is_there)) == 0):
+                            Name = input('The name you registered as is not there. Enter a different name.\n')
+                            Is_there = Name_is_there(Name)
+                        Second_name = input('Enter the second username.\n')
+                        Also_there = Name_is_there(Second_name)
+                        while (((len(Also_there)) == 0) or (Second_name == Name)):
+                            Second_name = input('The name you registered is not there or already entered. Enter a new name.\n')
+                            Also_there = Name_is_there(Second_name)
+                        return [Name.casefold(),Second_name.casefold()]
+    else:
+        Enter_new_name()
+        return [None,None]
+
+# All profiles have 0 now
+def Clear():
+    global Database
+    for Entry in Database:
+        Entry[1] = 0
+        Entry[2] = 0
+        Entry[3] = 0
+        Entry[4] = 0
+    Database = Rank_Database()
+    Write_to_file()
+    #print(Database)
+
+# We clear all the names if we want
+def Clear_names():
+    global Database
+    Database = []
+    Write_to_file()
+    
+#Print_Leaderboards() # Test Code
+#Clear_names()
+#Print_Leaderboards()
+# Clear a name() basically takes in a username and removes it from database, ranks it and writes it to file
+def Clear_a_name():
+    global Database
+    if ((len(Database)) == 0):
+        print('Nothing to clear')
+        return None
+    Name = input('Enter a username to remove:')
+    Is_there = Name_is_there(Name)
+    while ((len(Is_there)) == 0):
+        Name = input('This username does not exist. Enter another one:')
+        Is_there = Name_is_there(Name)
+    for i in (range(len(Database))):
+        #print(i)
+        #print(Database[i][0])
+        #print(Name)
+        if ((Database[i][0].casefold()) == (Name.casefold())):
+            #print('Gets in for', Database[i][0])
+            Database.pop(i)
+            Database = Rank_Database()
+            Write_to_file()
+            break
+#Write_to_file()
+#Print_Leaderboards()
+#Clear_a_name()
+#Print_Leaderboards()
+#Clear()
+#Sign_in()
+#Print_Leaderboards()
+# this function prints the rules of how we organize our leaderboards, when the player requests it.
+def Print_Rules():
+    print('We have 3 levels of difficulty: Easy, Medium, Hard. Winning on these levels gives +4,5,6 respectively. Losing on\n\
+Easy, Medium, Hard gives -6,-5,-4 respectively. Tying on Easy, Medium, Hard gives +1,2,3 respectively. This is\n\
+added to your existing score to give you your score. Players who haven\'t played are given a score of 0, and are\n\
+placed below the standings of anyone who has played. When scores are tied, they are listed from top down in alphabetical\n\
+order.')
+#Print_Rules()
+
+def Leaderboards():
+    global Database
+    Input = input('Press \'r\' for rules, \'c\' to clear the scores (everyone starts at 0 again), \'clear\' to clear\n\
+all names, \'clear name\' to clear a name, \'b\' to go back to main menu, and \'p\' to print.\n')
+    while (not((Input.casefold()) in ['r','c','clear','b','clear name','p'])):
+        Input = input('Invalid input Press \'r\' for rules, \'c\' to clear the scores (everyone starts at 0 again),\n\'clear\'\
+to clear all names, \'clear name\' to clear a name, \'b\' to go back to main menu, amd \'p\' to print.\n')
+    if ((Input.casefold()) == 'r'):
+        Print_Rules()
+        Leaderboards()
+    elif ((Input.casefold()) == 'c'):
+        Clear()
+        Leaderboards()
+    elif ((Input.casefold()) == 'clear'):
+        Clear_names()
+        Leaderboards()
+    elif ((Input.casefold()) == 'b'):
+        Main_Menu()
+    elif ((Input.casefold()) == 'p'):
+        Print_Leaderboards()
+        Leaderboards()
+    else:
+        Clear_a_name()
+        Leaderboards()
+        
+def sign_out():
+    global Players_signed_in
+    Input = ''
+    Nones = Number_of_nones(Players_signed_in)
+    if (Nones == 0):
+        Input = input('Two people signed in. Press \'1\' to sign out 1 or \'2\' to sign out both.')
+        while (not((Input.casefold()) in ['1','2'])):
+            Input = input('Invalid input. Select \'1\' or \'2\' to sign out 1 or 2.')
+        if (Input == '1'):
+            Player_to_sign_in = input('Select 1 of \'{First_name}\' and\
+ \'{Second_name}\' to remove:'.format(First_name = Players_signed_in[0],Second_name = Players_signed_in[1]))
+            while (not (Player_to_sign_in.casefold() in Players_signed_in)):
+                Player_to_sign_in = input('Invalid input. Select 1 of \'{First_name}\' and\
+ \'{Second_name}\' to remove:'.format(First_name = Players_signed_in[0],Second_name = Players_signed_in[1]))
+            Players_signed_in[Players_signed_in.index(Player_to_sign_in.casefold())] = None
+            if (Players_signed_in[0] == None):
+                i = 1
+            else:
+                i = 0
+            Players_signed_in = [Players_signed_in[i].casefold(),None]
+            return Players_signed_in
+        else:
+            Players_signed_in = [None,None]
+            return Players_signed_in
+    elif (Nones == 1):
+        Input = input('One person signed in. Sign them out?(Y/N)')
+        while (not((Input.casefold()) in ['y','n'])):
+            Input = input('Invalid input. Select \'Y\' or \'N\' to sign them out or not.')
+        if (Input == 'y'):
+            Players_signed_in = [None,None]
+            return Players_signed_in
+        else:
+            return Players_signed_in
+    else:
+        print('Nobody is signed in')
+        return [None,None]
+            
+def Get_Single_Player():
+    global Players_signed_in
+    Nones = Number_of_nones(Players_signed_in)
+    Input = ''
+    if (Nones == 0):
+        Input = input('2 people are signed in.Select 1 of \'{First_name}\' and\
+ \'{Second_name}\' to play as:'.format(First_name = Players_signed_in[0],Second_name = Players_signed_in[1]))
+        while (not(((Input.casefold()) in Players_signed_in))):
+            Input = input('Invalid input.Select 1 of \'{First_name}\' and\
+ \'{Second_name}\' to play as:'.format(First_name = Players_signed_in[0],Second_name = Players_signed_in[1]))
+        return Input.casefold()
+    elif (Nones == 1):
+        if Players_signed_in[0] == None:
+            return Players_signed_in[1].casefold()
+        else:
+            return Players_signed_in[0].casefold()
+    else:
+        return None
+    
+def Main_Menu_Game():
+    global Border, First_Row_Half_Top, First_Row_Bottom, Second_Row_Top, Third_Row_Top, Top_Numbers, Board,\
+           Array_of_available_spots, Array_of_player_pieces, Letter_legend, Coordinate_Numbers, Combinations, \
+           player_1, List_of_coordinates
+    
+    
+def Main_Menu():
+    global Database,Players_signed_in
+    #print(Database)
+    if ((len(Database)) == 0):
+        Get_Profiles()
+    Database = Rank_Database()
+    Write_to_file()
+    Print_Leaderboards()
+    #print(Database)
+    #print(Players_signed_in)
+    #Database = Rank_Database()
+    #Write_to_file()
+    Input = input('Welcome to Tic Tac Toe. Press \'l\' for leaderboards, \'q\' to quit, \'s\' to sign in or enter a new\
+ username,\n\'g\' to play the game and \'o\' to sign out.\n')
+    while (not ((Input.casefold()) in ['l','q','s','g','o'])):
+        Input = input('Invalid input. Press \'l\' for leaderboards, \'q\' to quit,\'s\' to sign in or enter a new username,\
+\n\'g\' to play the game and \'o\' to sign out.\n')
+    if ((Input.casefold()) == 'l'):
+        Leaderboards()
+    elif ((Input.casefold()) == 's'):
+        Players_signed_in = Sign_in()
+        #print(Players_signed_in)
+        Main_Menu()
+    elif ((Input.casefold()) == 'o'):
+        Players_signed_in = sign_out()
+        Main_Menu()
+    elif ((Input.casefold()) == 'g'):
+        Select_Player_Option()
+        Main_Menu()
+    else:
+        Database = Rank_Database()
+        #print(Database)
+        Write_to_file()
+        Database.clear()
+        #print(Database)
+        return None
+#Number_of_nones(Players_signed_in)
+#Write_to_file()
+Main_Menu()
+#Tic_Tac_Toe()
+#Run_Game('','')
