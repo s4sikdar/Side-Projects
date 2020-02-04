@@ -1,0 +1,176 @@
+#Run this in Jupyter for optimal results
+import os
+import openpyxl
+import xlsxwriter
+from datetime import datetime
+
+# This is to check if a file exists already. If not, then create a new pair of files to start working with.
+def check_file():
+    #Excel_marker = open('Excel File.txt','w')
+    Filename = ''
+    Excel_file = ''
+    index = 2
+    #Excel_marker.close()
+    #return None
+    if (not(os.path.exists('Excel File.txt'))):
+        Excel_marker = open('Excel File.txt','w')
+        Filename = input('Select a file name for your expense tracker. Don\'t use slashes, dashes, or periods.\n\
+Do not change the name, as otherwise the program won\'t find it.\n')
+        Excel_file = Filename + '.xlsx'
+        while (os.path.exists(Excel_file)):
+            Filename = input('This file is already there. Choose a new name\n')
+            Excel_file = Filename + '.xlsx'
+        if (not(os.path.exists(Excel_file))):
+            #Excel_marker.close()
+            Excel_marker.write(Excel_file + '\n')
+            wb = xlsxwriter.Workbook(Excel_file)
+            worksheet = wb.add_worksheet() 
+            worksheet.write('A1', 'Date/Time')
+            worksheet.write('B1','Description')
+            worksheet.write('C1','Debit(Increase)')
+            worksheet.write('D1','Credit(Decrease)')
+            worksheet.write('E1','Beginning balance')
+            worksheet.write('F1','Ending Balance')
+            wb.close()
+            wb = openpyxl.load_workbook(Excel_file)
+            ws = wb.active
+            ws.column_dimensions['A'].width = len(ws['A1'].value) + 1
+            ws.column_dimensions['B'].width = len(ws['B1'].value)
+            ws.column_dimensions['C'].width = len(ws['C1'].value)
+            ws.column_dimensions['D'].width = len(ws['D1'].value)
+            ws.column_dimensions['E'].width = len(ws['E1'].value)
+            ws.column_dimensions['F'].width = len(ws['F1'].value)
+            Excel_marker.write(str(index))
+            wb.save(Excel_file)
+            Excel_marker.close()
+            wb.close()
+            print('A text file named as \'Excel File.txt\' has been written to your computer.\n\
+An excel file has been written to your computer named \''+ Excel_file + '\'.\n\
+Don\'t alter these files under any circumstances or this program won\'t work.')
+        if (not(Excel_marker.closed)):
+            Excel_marker.close()
+
+#This checks if our entries are proper numbers where we apply this function. We check for floating points read in.
+def Is_proper(number):
+    Number_List = list(number)
+    decimal_count = 0
+    for i in (range(len(Number_List))):
+        if (Number_List[i] == '.'):
+            decimal_count += 1 
+            if ((i + 3) < (len(Number_List))):
+                return False
+            if (decimal_count > 1):
+                return False
+        elif (not(Number_List[i].isdecimal())):
+            return False
+    return True
+
+# This is the meat and potatoes where we add new expenses and modify our file accordingly. It's a running loop
+# that's terminated with 'q' entered in at the main menu. Every iteration if you choose 'e' you add a new expense
+def Expense_Adder():
+    Amount = None
+    Credit_or_debit = None
+    Beginning_balance = None
+    Proper_number = None
+    Input = input('Press \'e\' to add an expense, press \'q\' to quit.\n')
+    while (not((Input.casefold()) in ['e','q'])):
+        Input = input('Invalid entry. Press \'e\' to add an expense, press \'q\' to quit.\n')
+    File = open('Excel File.txt','r')
+    List = File.readlines()
+    #print(List[0][:(len(List[0]))])
+    #return List[0][:((len(List[0])) - 1)]
+    #print(List)
+    #if ((Input.casefold()) == 'e'):
+    File.close()
+    if ((Input.casefold()) == 'e'):
+        now = datetime.now()
+        wb = openpyxl.load_workbook(List[0][:((len(List[0])) - 1)])
+        ws = wb.active
+        if ((int(List[1])) == 2):
+            Beginning_balance = input('Select a beginning balance to start with.\n')
+            Proper_number = Is_proper(Beginning_balance)
+            while (not(Proper_number)):
+                Beginning_balance = input('Invalid input. Enter an appropriate input for beginning balance.\
+ Decimals are allowed.\n')
+                Proper_number = Is_proper(Beginning_balance)
+            ws['E2'] = float(Beginning_balance)
+            ws['A2'] = now.strftime("%B %d, %Y %H:%M:%S")
+            ws.column_dimensions['A'].width = len(ws['A2'].value)
+            ws['B2'] = input('Enter a description of the transaction.\n')
+            if ((ws.column_dimensions['B'].width) < (len(ws['B2'].value))):
+                ws.column_dimensions['B'].width = (len(ws['B2'].value))
+            Amount = input('Enter the amount.\n')
+            Proper_number = Is_proper(Amount)
+            while (not(Proper_number)):
+                Amount = input('Invalid input. Enter an appropriate input for amount.\
+ Decimals are allowed.\n')
+                Proper_number = Is_proper(Amount)
+            Credit_or_debit = input('Enter \'c\' for credit(decrease), \'d\' for debit(increase).\n')
+            while (not((Credit_or_debit.casefold()) in ['c','d'])):
+                Credit_or_debit = input('Invalid input. Enter \'c\' for credit(decrease), \'d\' for debit(increase).\n')
+            if ((Credit_or_debit.casefold()) == 'c'):
+                if (((float(Beginning_balance)) - (float(Amount))) < 0):
+                    while (((float(Beginning_balance)) - (float(Amount))) < 0):
+                        Amount = input('Enter an amount less than beginning balance.\n')
+                        Proper_number = Is_proper(Amount)
+                        while (not(Proper_number)):
+                            Amount = input('Invalid input. Enter an appropriate input for amount.\
+ Decimals are allowed.\n')
+                            Proper_number = Is_proper(Amount)
+                ws['D2'] = float(Amount)
+                ws['C2'] = float(0)
+                ws['F2'] = (ws['E2'].value) - (ws['D2'].value) + (ws['C2'].value)
+            else:
+                ws['C2'] = float(Amount)
+                ws['D2'] = float(0)
+                ws['F2'] = (ws['E2'].value) - (ws['D2'].value) + (ws['C2'].value)
+            wb.save(List[0][:((len(List[0])) - 1)])
+            List[1] = str((int(List[1])) + 1)
+            with open('Excel File.txt','w') as Excel_File:
+                for element in List:
+                    Excel_File.write(element)
+        else:
+            ws['E' + List[1]] = ws['F' + (str((int(List[1])) - 1))].value
+            ws['A' + List[1]] = now.strftime("%B %d, %Y %H:%M:%S")
+            ws['B' + List[1]] = input('Enter a description of the transaction.\n')
+            if ((ws.column_dimensions['B'].width) < (len(ws['B' + List[1]].value))):
+                ws.column_dimensions['B'].width = (len(ws['B' + List[1]].value))
+            Amount = input('Enter the amount.\n')
+            Proper_number = Is_proper(Amount)
+            while (not(Proper_number)):
+                Amount = input('Invalid input. Enter an appropriate input for amount.\
+ Decimals are allowed.\n')
+                Proper_number = Is_proper(Amount)
+            Credit_or_debit = input('Enter \'c\' for credit(decrease), \'d\' for debit(increase).\n')
+            while (not((Credit_or_debit.casefold()) in ['c','d'])):
+                Credit_or_debit = input('Invalid input. Enter \'c\' for credit(decrease), \'d\' for debit(increase).\n')
+            if ((Credit_or_debit.casefold()) == 'c'):
+                if (((float(ws['E' + List[1]].value)) - (float(Amount))) < 0):
+                    while (((float(ws['E' + List[1]].value)) - (float(Amount))) < 0):
+                        Amount = input('Enter an amount less than beginning balance.\n')
+                        Proper_number = Is_proper(Amount)
+                        while (not(Proper_number)):
+                            Amount = input('Invalid input. Enter an appropriate input for amount.\
+ Decimals are allowed.\n')
+                            Proper_number = Is_proper(Amount)
+                ws['C' + List[1]] = float(0)
+                ws['D' + List[1]] = float(Amount)
+                ws['F' + List[1]] = (ws['E' + List[1]].value) - (ws['D' + List[1]].value) + (ws['C' + List[1]].value)
+            else:
+                ws['C' + List[1]] = float(Amount)
+                ws['D' + List[1]] = float(0)
+                ws['F' + List[1]] = (ws['E' + List[1]].value) - (ws['D' + List[1]].value) + (ws['C' + List[1]].value)
+            wb.save(List[0][:((len(List[0])) - 1)])
+            List[1] = str((int(List[1])) + 1)
+            with open('Excel File.txt','w') as Excel_File:
+                for element in List:
+                    Excel_File.write(element)
+        Expense_Adder()
+    else:
+        return None
+
+# We did the hard work above, and this is the function putting it all together 
+def Expense_Tracker():
+    check_file()
+    Expense_Adder()
+Expense_Tracker()
